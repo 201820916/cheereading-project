@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}책 검색{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-11 col-xl-10">
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-3">책 검색</h3>
+                    <form method="GET" action="{% url 'books:search' %}" class="d-flex">
+                        <input type="text" name="query" value="{{ query }}" class="form-control me-2" placeholder="책 제목, 저자 등으로 검색해보세요">
+                        <button type="submit" class="btn btn-primary">검색</button>
+                    </form>
+                </div>
+            </div>
+  
+            <div class="card">
+                <div class="card-body">
+                    {% if query %}
+                        <h5 class="card-title mb-4">"{{ query }}"에 대한 검색 결과 ({{ page_obj.paginator.count }}건)</h5>
+                    {% else %}
+                        <h5 class="card-title mb-3">검색어를 입력하여 책을 찾아보세요.</h5>
+                    {% endif %}
+
+                    <div class="book-grid">
+                        {% for book in page_obj %}
+                            <a href="{% url 'books:book_detail' book_id=book.id %}" class="book-card-link">
+                                <div class="book-card">
+                                    
+                                    {% if book.cover_image_url %}
+                                        <img src="{{ book.cover_image_url }}" alt="{{ book.title }}" class="book-cover-img">
+                                    {% else %}
+                                        <img src="{% static 'images/default_cover.png' %}" alt="{{ book.title }}" class="book-cover-img">
+                                    {% endif %}
+                                    
+                                    <div class="book-info">
+                                        <h6 class="book-title">{{ book.title }}</h6>
+                                        <p class="book-author text-muted small">{{ book.author }}</p>
+                                    </div>
+                                </div>
+                            </a>
+                        {% empty %}
+                            {% if query %}
+                                <div class="text-center p-5 w-100">
+                                    <p class="text-muted">"{{ query }}"에 대한 검색 결과가 없습니다.</p>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    {% if page_obj.has_other_pages %}
+                    <div class="pagination-controls mt-4">
+                        {% if page_obj.has_previous %}
+                            <a href="?query={{ query }}&page={{ page_obj.previous_page_number }}" class="btn nav-btn">&laquo; 이전</a>
+                        {% else %}
+                            <button class="btn nav-btn" disabled>&laquo; 이전</button>
+                        {% endif %}
+
+                        <span class="page-indicator">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+
+                        {% if page_obj.has_next %}
+                            <a href="?query={{ query }}&page={{ page_obj.next_page_number }}" class="btn nav-btn">다음 &raquo;</a>
+                        {% else %}
+                            <button class="btn nav-btn" disabled>다음 &raquo;</button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<style>
+    /* [추가] 그리드 및 카드 스타일 */
+    .book-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+    }
+
+    .book-card-link {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .book-card {
+        background-color: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        text-align: center;
+        padding: 10px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .book-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    .book-cover-img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 12px;
+    }
+
+    .book-info {
+        flex-grow: 1;
+    }
+
+    .book-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        height: 2.5em;
+    }
+    
+    .book-author {
+        margin-bottom: 0;
+    }
+    
+    /* [추가] 페이지네이션 스타일 */
+    .pagination-controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .nav-btn {
+        border: 1px solid #ccc;
+    }
+    
+    .page-indicator {
+        font-weight: bold;
+        color: #555;
+    }
+
+    /* 검색 버튼 색상 테마 유지 */
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    .btn-primary:hover {
+        background-color: #3B5043;
+        border-color: #3B5043;
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 992px) {
+        .book-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 768px) {
+        .book-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 576px) {
+        .book-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}

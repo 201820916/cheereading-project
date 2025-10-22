@@ -1,0 +1,61 @@
+{% comment %}
+    이 파일은 프로필 페이지의 '내 서재' 섹션을 담당하는 부품 템플릿입니다.
+    AJAX 페이지네이션에서도 사용됩니다.
+{% endcomment %}
+
+<h5 class="card-title mb-3">내 서재 (최근 읽은 책)</h5>
+
+<div class="row">
+    {% for entry in reading_entries_page %}
+        <div class="col-6 mb-3">
+            <a href="{% url 'books:book_detail' entry.book.id %}" class="text-decoration-none text-dark">
+                <div class="book-item-in-profile">
+                    {% if entry.book.cover_image_url %}
+                        <img src="{{ entry.book.cover_image_url }}" alt="{{ entry.book.title }}" class="img-fluid rounded">
+                    {% else %}
+                        <div class="no-image-profile d-flex align-items-center justify-content-center rounded">
+                            <small>No Image</small>
+                        </div>
+                    {% endif %}
+                    <p class="book-title-profile mt-1 mb-0 text-center">{{ entry.book.title|truncatechars:15 }}</p>
+                </div>
+            </a>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <p class="text-muted">아직 서재에 등록된 책이 없습니다.</p>
+        </div>
+    {% endfor %}
+</div>
+
+
+{% if reading_entries_page.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-2">
+    <ul class="pagination pagination-sm justify-content-center">
+        {% if reading_entries_page.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ reading_entries_page.previous_page_number }}">«</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">«</span></li>
+        {% endif %}
+
+        <li class="page-item disabled"><span class="page-link">{{ reading_entries_page.number }} / {{ reading_entries_page.paginator.num_pages }}</span></li>
+
+        {% if reading_entries_page.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ reading_entries_page.next_page_number }}">»</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">»</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<style>
+    .no-image-profile {
+        width: 100%;
+        padding-top: 140%;
+        background-color: #eee;
+    }
+    .book-title-profile {
+        font-size: 0.85rem;
+    }
+</style>

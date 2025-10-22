@@ -1,0 +1,30 @@
+# Python 가상 환경
+venv/
+
+# Python 캐시 파일
+__pycache__/
+*.pyc
+
+# 에디터 설정 파일
+.vscode/
+
+# 민감 정보 (만약 있다면)
+.env
+
+# Django 기본 DB (SQLite)
+db.sqlite3
+
+# 로그 파일
+*.log
+
+# 스크린샷에서 확인된 대용량 데이터 파일 (필수!)
+# (용량이 커서 Git에 올리면 안 됩니다)
+book_details_results.csv
+book_index.faiss
+
+# 사용자가 업로드한 파일 (미디어 파일)
+media/
+
+# (참고) Render 배포 시 수집될 정적 파일 폴더
+# (대신 settings.py의 STATIC_ROOT에 지정된 폴더)
+staticfiles/

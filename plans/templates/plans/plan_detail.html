@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan.title }} - 독서 계획 상세{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>{{ plan.title }}</h2>
+        <div>
+            <a href="{% url 'plans:plan_list' %}" class="btn btn-secondary btn-sm me-2">목록으로</a>
+            {% if request.user == plan.creator %}
+                <a href="{% url 'plans:plan_update' plan.id %}" class="btn btn-primary btn-sm me-2">수정</a>
+                <form action="{% url 'plans:plan_delete' plan.id %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('정말로 이 계획을 삭제하시겠습니까?');">삭제</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    <hr>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="p-3 border rounded bg-light">
+    <h4 class="mb-3">계획 상세 정보</h4>
+    <p><strong>설명:</strong> {{ plan.description|linebreaksbr }}</p>
+    {% if aggregated_feedback.satisfaction %}
+    <p><strong>참여자 만족도:</strong> <span class="text-info">{{ aggregated_feedback.satisfaction.text }} ({{ aggregated_feedback.satisfaction.percentage }}%)</span></p>
+    {% endif %}
+    <p><strong>기간:</strong> {{ plan.start_date|date:"Y.m.d" }} ~ {{ plan.end_date|date:"Y.m.d" }}
+        {# ▼▼▼ [추가] 기간 피드백 ▼▼▼ #}
+        {% if aggregated_feedback.duration %}
+            <span class="text-info">({{ aggregated_feedback.duration.text }} {{ aggregated_feedback.duration.percentage }}%)</span>
+        {% endif %}
+    </p>
+    <p><strong>난이도:</strong> {{ plan.get_difficulty_display }}
+        {# ▼▼▼ [추가] 난이도 피드백 ▼▼▼ #}
+        {% if aggregated_feedback.difficulty %}
+            <span class="text-info">({{ aggregated_feedback.difficulty.text }} {{ aggregated_feedback.difficulty.percentage }}%)</span>
+        {% endif %}
+    </p>
+    <p><strong>생성자:</strong> {{ plan.creator.username }}</p>
+    <p><strong>참여자:</strong> {{ plan.participants.count }}명</p>
+</div>
+        </div>
+
+        <div class="col-lg-6">
+            <h4 class="mb-3">포함된 책 목록</h4>
+            <div class="list-group">
+                {% for plan_book in plan.plan_books.all %}
+                <a href="{% url 'books:book_detail' plan_book.book.id %}" class="list-group-item list-group-item-action">
+                    {{ plan_book.book.title }}
+                </a>
+                {% empty %}
+                <div class="list-group-item">아직 추가된 책이 없습니다.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

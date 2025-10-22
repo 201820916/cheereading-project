@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %} {# static 파일 로드를 위해 추가 (필요한 경우) #}
+
+{% block title %}로그인{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <h2 class="text-center mb-4">로그인</h2>
+            <div class="card p-4 shadow-sm">
+                {% if form.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        아이디와 비밀번호를 다시 확인해주세요.
+                    </div>
+                {% endif %}
+                {% if next %}
+                    {% if user.is_authenticated %}
+                        <div class="alert alert-warning" role="alert">
+                            로그인된 상태입니다.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info" role="alert">
+                            로그인이 필요합니다.
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <form method="post" action="{% url 'users:login' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">아이디 (Username)</label>
+                        <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" 
+                               class="form-control" placeholder="아이디를 입력하세요" required
+                               value="{{ form.username.value|default_if_none:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">비밀번호 (Password)</label>
+                        <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" 
+                               class="form-control" placeholder="비밀번호를 입력하세요" required>
+                    </div>
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">로그인</button>
+                    </div>
+                    <input type="hidden" name="next" value="{{ next }}">
+                </form>
+
+                <hr>
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'users:find_id' %}" class="btn btn-outline-secondary">아이디 찾기</a>
+                    <a href="{% url 'users:password_reset' %}" class="btn btn-outline-secondary">비밀번호 찾기</a>
+
+
+                <p class="text-center mt-3">
+                    아직 회원이 아니신가요? <a href="{% url 'users:signup' %}">회원가입</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

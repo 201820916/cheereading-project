@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}나의 북 플래닝{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-primary, .btn-success { background-color: #4A675A; border-color: #4A675A; }
+    .btn-primary:hover, .btn-success:hover { background-color: #3B5043; border-color: #3B5043; }
+    .btn-outline-secondary { color: #6c757d; border-color: #6c757d; }
+    .btn-outline-secondary:hover { color: #fff; background-color: #6c757d; border-color: #6c757d; }
+    .nav-tabs .nav-link.active { color: #4A675A; font-weight: bold; }
+    /* a태그로 감싸진 list-group-item에 cursor:pointer 기본 적용됨 */
+    .plan-card { transition: background-color 0.2s; }
+    .plan-card:hover { background-color: #f8f9fa; }
+    .plan-card.active { border-left: 4px solid #4A675A; background-color: #f8f9fa; }
+    .content-placeholder { display: flex; justify-content: center; align-items: center; height: 100%; min-height: 300px; background-color: #f8f9fa; border-radius: .25rem; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container my-5">
+    <h2>나의 북 플래닝</h2>
+    <p>참여하고 있거나 직접 만든 독서 계획을 관리하세요.</p>
+    <hr class="mb-4">
+
+    <div class="row">
+        {# --- 왼쪽 컬럼: 플랜 목록 --- #}
+        <div class="col-md-5">
+            <nav>
+                <div class="nav nav-tabs mb-3" id="nav-tab" role="tablist">
+                    <a class="nav-link {% if active_tab == 'participating' %}active{% endif %}" href="?tab=participating">참여 중인 플랜</a>
+                    <a class="nav-link {% if active_tab == 'created' %}active{% endif %}" href="?tab=created">생성한 플랜</a>
+                    <a class="nav-link {% if active_tab == 'completed' %}active{% endif %}" href="?tab=completed">완료한 플랜</a>
+                </div>
+            </nav>
+            <div class="list-group">
+                {% if active_tab == 'participating' %}
+                    {% for user_plan in participating_user_plans %}
+                        <a href="?tab=participating&plan_id={{ user_plan.plan.id }}" class="list-group-item list-group-item-action plan-card {% if selected_plan and selected_plan.id == user_plan.plan.id %}active{% endif %}">
+                            <h6 class="mb-1">{{ user_plan.plan.title }}</h6>
+                            <small class="text-muted">생성자: {{ user_plan.plan.creator.nickname|default:user_plan.plan.creator.username }}</small>
+                        </a>
+                    {% empty %}
+                        <div class="list-group-item">참여 중인 플랜이 없습니다.</div>
+                    {% endfor %}
+                {% elif active_tab == 'created' %}
+                    {% for plan in created_plans %}
+                         <a href="?tab=created&plan_id={{ plan.id }}" class="list-group-item list-group-item-action plan-card {% if selected_plan and selected_plan.id == plan.id %}active{% endif %}">
+                            <h6 class="mb-1">{{ plan.title }}</h6>
+                            <small class="text-muted">직접 생성한 플랜</small>
+                        </a>
+                    {% empty %}
+                        <div class="list-group-item">생성한 플랜이 없습니다.</div>
+                    {% endfor %}
+                {% elif active_tab == 'completed' %}
+                     {% for user_plan in completed_plans %}
+                        <a href="?tab=completed&plan_id={{ user_plan.plan.id }}" class="list-group-item list-group-item-action plan-card {% if selected_plan and selected_plan.id == user_plan.plan.id %}active{% endif %}">
+                            <h6 class="mb-1">{{ user_plan.plan.title }}</h6>
+                            <small class="text-muted">완료일: {{ user_plan.updated_at|date:"Y-m-d" }}</small>
+                        </a>
+                    {% empty %}
+                        <div class="list-group-item">완료한 플랜이 없습니다.</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        {# --- 오른쪽 컬럼: 상세 정보 --- #}
+        <div class="col-md-7">
+            {% if selected_plan %}
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title">{{ selected_plan.title }}</h4>
+                        <p class="text-muted">{{ selected_plan.description }}</p>
+                        <hr>
+                        <h6>📚 포함된 책 목록</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for plan_book in books_for_display %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'books:book_detail' plan_book.book.id %}" class="text-decoration-none text-dark">
+                                        {{ forloop.counter }}. {{ plan_book.book.title }}
+                                    </a>
+                                    
+                                    {% if active_tab == 'participating' %}
+                                        <select class="form-select form-select-sm progress-select" 
+                                                style="width: 120px;" 
+                                                data-plan-id="{{ selected_plan.id }}" 
+                                                data-book-id="{{ plan_book.book.id }}">
+                                            {% for value, display in status_choices %}
+                                                <option value="{{ value }}" {% if plan_book.current_status == value %}selected{% endif %}>
+                                                    {{ display }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    {% endif %}
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-muted">
+                                    이 플랜에 포함된 책이 없습니다.
+                                </li>
+                            {% endfor %}
+                        </ul>
+
+                        {% if active_tab == 'participating' and all_books_completed %}
+                            <hr>
+                            <form action="{% url 'plans:complete_plan' selected_plan.id %}" method="post" class="mt-3">
+                                {% csrf_token %}
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success">🎉 플랜 완료하고 서재 등록하기</button>
+                                </div>
+                            </form>
+                        {% elif active_tab == 'completed' %}
+                             <hr>
+                            <div class="mt-3">
+                                <h6>⭐ 이 플랜은 어떠셨나요?</h6>
+                                {% if user_feedback_exists %}
+                                    <p class="text-success"><i class="bi bi-check-circle-fill"></i> 피드백을 남겨주셔서 감사합니다!</p>
+                                {% else %}
+                                    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                                        피드백 남기기
+                                    </button>
+                                {% endif %}
+
+                                {% if aggregated_feedback %}
+    <div class="mt-4 p-3 border rounded bg-light">
+        <h6 class="mb-3">📊 해당 플랜의 피드백 요약</h6>
+        <ul class="list-unstyled mb-0">
+            {% if aggregated_feedback.satisfaction %}
+                <li><strong>만족도:</strong> {{ aggregated_feedback.satisfaction }}</li>
+            {% endif %}
+            {% if aggregated_feedback.difficulty %}
+                <li><strong>난이도:</strong> {{ aggregated_feedback.difficulty }}</li>
+            {% endif %}
+            {% if aggregated_feedback.duration %}
+                <li><strong>기간:</strong> {{ aggregated_feedback.duration }}</li>
+            {% endif %}
+        </ul>
+    </div>
+{% else %}
+    {# 피드백이 하나도 없을 경우 메시지 표시 #}
+    <p class="text-muted small mt-2">아직 집계된 피드백이 없습니다.</p>
+{% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="content-placeholder">
+                    <p class="text-muted">왼쪽에서 플랜을 선택하여 상세 내용을 확인하세요.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# 피드백 모달 HTML #}
+{% if selected_plan and active_tab == 'completed' and not user_feedback_exists %}
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">'{{ selected_plan.title }}' 플랜 피드백</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {# [핵심] 비어있던 폼 내용을 채웁니다. #}
+                <form id="feedbackForm">
+                    <input type="hidden" name="plan_id" value="{{ selected_plan.id }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">1. 플랜에 대한 전반적인 만족도는 어떠셨나요?</label>
+                        <div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="satisfaction" id="sat5" value="5" required><label class="form-check-label" for="sat5">아주 좋았어요</label></div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="satisfaction" id="sat4" value="4"><label class="form-check-label" for="sat4">좋았어요</label></div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="satisfaction" id="sat3" value="3"><label class="form-check-label" for="sat3">보통이에요</label></div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="satisfaction" id="sat2" value="2"><label class="form-check-label" for="sat2">별로였어요</label></div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="satisfaction" id="sat1" value="1"><label class="form-check-label" for="sat1">아주 별로였어요</label></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">2. 플랜에 포함된 책들의 난이도는 어떠셨나요?</label>
+                        <div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="difficulty" id="diff1" value="1" required><label class="form-check-label" for="diff1">쉬웠어요</label></div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="difficulty" id="diff2" value="2"><label class="form-check-label" for="diff2">적절했어요</label></div>
+                            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="difficulty" id="diff3" value="3"><label class="form-check-label" for="diff3">어려웠어요</label></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">3. 플랜을 완료하기까지 기간은 적절했나요?</label>
+                        <div>
+                             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="duration" id="dur1" value="1" required><label class="form-check-label" for="dur1">짧았어요</label></div>
+                             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="duration" id="dur2" value="2"><label class="form-check-label" for="dur2">적절했어요</label></div>
+                             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="duration" id="dur3" value="3"><label class="form-check-label" for="dur3">길었어요</label></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" id="submitFeedbackBtn">제출하기</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- 1. 피드백 제출 로직 ---
+    const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+    if (submitFeedbackBtn) {
+        submitFeedbackBtn.addEventListener('click', function() {
+            const form = document.getElementById('feedbackForm');
+            const planId = form.querySelector('input[name="plan_id"]').value;
+            const satisfaction = form.querySelector('input[name="satisfaction"]:checked');
+            const difficulty = form.querySelector('input[name="difficulty"]:checked');
+            const duration = form.querySelector('input[name="duration"]:checked');
+
+            if (!satisfaction || !difficulty || !duration) {
+                alert('모든 항목에 답변해주세요.');
+                return;
+            }
+
+            const feedbackData = {
+                satisfaction: satisfaction.value,
+                difficulty: difficulty.value,
+                duration: duration.value,
+            };
+
+            const url = `/plans/${planId}/feedback/`;
+            const csrfToken = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(feedbackData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('피드백이 성공적으로 제출되었습니다.');
+                    window.location.reload();
+                } else {
+                    alert('오류가 발생했습니다: ' + (data.message || '다시 시도해주세요.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('요청 중 오류가 발생했습니다.');
+            });
+        });
+    }
+
+    // --- 2. 책 진행 상태 업데이트 로직 ---
+    const progressSelects = document.querySelectorAll('.progress-select');
+    progressSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const planId = this.dataset.planId;
+            const bookId = this.dataset.bookId;
+            const newStatus = this.value;
+            
+            const url = `/plans/progress/update/${planId}/${bookId}/`;
+            const csrfToken = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+
+            const formData = new FormData();
+            formData.append('status', newStatus);
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.reload(); 
+                } else {
+                    alert('상태 업데이트에 실패했습니다: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('상태 업데이트 중 오류가 발생했습니다.');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

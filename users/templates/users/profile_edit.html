@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}프로필 수정{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-card .profile-image {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* 기본 아이콘 스타일 */
+    .default-profile-icon {
+        font-size: 142px; /* 아이콘 크기 (이미지 크기와 비슷하게) */
+        color: #ced4da;   /* 아이콘 색상 (연한 회색) */
+        line-height: 1;  /* 아이콘이 위로 뜨는 현상 방지 */
+    }
+
+    .btn-primary {
+        background-color: #4A675A; /* 프로필 수정 버튼과 동일한 색상 */
+        border-color: #4A675A;
+    }
+    .btn-primary:hover {
+        background-color: #3B5043; /* 호버 시 약간 더 어두운 색 */
+        border-color: #3B5043;
+    }
+
+
+    /* 실제 파일 인풋은 화면에서 숨김 */
+    .visually-hidden-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h2>프로필 수정</h2>
+        <p class="text-muted">수정 사항은 왼쪽에서 실시간으로 확인할 수 있습니다.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-5">
+            <div class="col-lg-5">
+                <h5 class="mb-3">미리보기</h5>
+                <div class="card preview-card shadow-sm">
+                    <div class="card-body text-center p-4 d-flex flex-column align-items-center justify-content-center">
+                        {% if user.profile.image %}
+                            <i id="preview-icon" class="bi bi-person-circle default-profile-icon mb-3 d-none"></i>
+                            <img id="preview-image" src="{{ user.profile.image.url }}" alt="프로필 사진 미리보기" class="profile-image mb-3">
+                        {% else %}
+                            <i id="preview-icon" class="bi bi-person-circle default-profile-icon mb-3"></i>
+                            <img id="preview-image" src="" alt="프로필 사진 미리보기" class="profile-image mb-3 d-none">
+                        {% endif %}
+                        
+                        {# ▼▼▼ [수정] h4 태그의 id를 preview-nickname으로 변경 ▼▼▼ #}
+                        <h4 id="preview-nickname" class="mb-2">{{ user.nickname|default:user.username }}</h4>
+                        <p id="preview-bio" class="text-muted">{{ user.profile.bio|default:"자기소개를 입력해주세요." }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <h5 class="mb-3">정보 입력</h5>
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label for="{{ nickname_form.nickname.id_for_label }}" class="form-label">닉네임</label>
+                            {{ nickname_form.nickname }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ profile_form.bio.id_for_label }}" class="form-label">자기소개</label>
+                            {{ profile_form.bio }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">프로필 이미지</label>
+                            <div>
+                                <label for="{{ profile_form.image.id_for_label }}" class="btn btn-outline-secondary btn-sm">이미지 선택</label>
+                                <span id="filename-display" class="ms-2 text-muted small"></span>
+                                {{ profile_form.image }}
+                            </div>
+                        </div>
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary">수정 완료</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nicknameInput = document.querySelector("#{{ nickname_form.nickname.id_for_label }}");
+    const bioInput = document.querySelector("#{{ profile_form.bio.id_for_label }}");
+    const imageInput = document.querySelector("#{{ profile_form.image.id_for_label }}");
+
+    if (nicknameInput) nicknameInput.classList.add('form-control');
+    if (bioInput) bioInput.classList.add('form-control');
+    if (imageInput) imageInput.classList.add('visually-hidden-input');
+
+    const previewImage = document.getElementById('preview-image');
+    const previewIcon = document.getElementById('preview-icon');
+    const previewNickname = document.getElementById('preview-nickname');
+    const previewBio = document.getElementById('preview-bio');
+    const filenameDisplay = document.getElementById('filename-display');
+
+    if (nicknameInput) {
+        nicknameInput.addEventListener('input', function() {
+            previewNickname.textContent = this.value || '{{ user.nickname|default:user.username }}';
+        });
+    }
+
+    if (bioInput) {
+        bioInput.addEventListener('input', function() {
+            previewBio.textContent = this.value || '자기소개를 입력해주세요.';
+        });
+    }
+    
+    if (imageInput) {
+        imageInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    if (previewIcon) previewIcon.classList.add('d-none');
+                    previewImage.classList.remove('d-none');
+                }
+                reader.readAsDataURL(file);
+                filenameDisplay.textContent = file.name;
+            } else {
+                filenameDisplay.textContent = "";
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

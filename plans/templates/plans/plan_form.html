@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% load widget_tweaks %} {# <-- 1. 가장 먼저 이 코드를 추가합니다. #}
+<h1>★★★★★ 파일이 수정되었습니다! ★★★★★</h1>
+{% block title %}새 독서 계획 만들기{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 이 부분은 변경 없습니다. */
+    .book-list-container {
+        height: 200px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        background-color: #fff;
+    }
+    #selected-books-list .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .star-rating .bi-star-fill {
+        color: #ced4da;
+        cursor: pointer;
+        transition: color 0.2s;
+        font-size: 1.5rem;
+    }
+    .star-rating .bi-star-fill.hover,
+    .star-rating .bi-star-fill.selected {
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h2>새 독서 계획 만들기</h2>
+        <p class="text-muted">나만의 독서 계획을 세우고 공유해보세요.</p>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    <p class="mb-0">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <input type="hidden" name="selected_books" id="id_selected_books">
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">1. 계획 정보 입력</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">계획 제목</label>
+                            {# 2. |add_class:"form-control" 을 사용하여 직접 스타일을 적용합니다. #}
+                            {{ form.title|add_class:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">계획 설명</label>
+                            {{ form.description|add_class:"form-control" }}
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">시작일</label>
+                                {{ form.start_date|add_class:"form-control" }}
+                            </div>
+                            <div class="col-6">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">종료일</label>
+                                {{ form.end_date|add_class:"form-control" }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.target_book_count.id_for_label }}" class="form-label">목표 권수</label>
+                            {{ form.target_book_count|add_class:"form-control" }}
+                        </div>
+                        <div>
+                            <label class="form-label">난이도</label>
+                            <div class="star-rating" id="star-rating-container">
+                                <i class="bi bi-star-fill" data-value="1"></i>
+                                <i class="bi bi-star-fill" data-value="2"></i>
+                                <i class="bi bi-star-fill" data-value="3"></i>
+                                <i class="bi bi-star-fill" data-value="4"></i>
+                                <i class="bi bi-star-fill" data-value="5"></i>
+                            </div>
+                            {# 3. |attr:"type:hidden" 으로 난이도 필드를 숨깁니다. #}
+                            {{ form.difficulty|attr:"type:hidden" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card h-100 shadow-sm">
+                     <div class="card-header bg-light">
+                        <h5 class="mb-0">2. 책 선택하기</h5>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <div class="input-group mb-3">
+                            <input type="text" id="book-search-query" class="form-control" placeholder="도서명으로 검색">
+                            <button class="btn btn-outline-secondary" type="button" id="book-search-btn">검색</button>
+                        </div>
+                        <label class="form-label">검색 결과:</label>
+                        <div id="search-results-container" class="book-list-container mb-3">
+                            <p id="search-placeholder" class="text-muted text-center pt-5">검색어를 입력하여 책을 찾아보세요.</p>
+                        </div>
+                        <hr>
+                        <label class="form-label fw-bold">선택된 책 목록:</label>
+                        <div id="selected-books-container" class="book-list-container flex-grow-1">
+                            <ul id="selected-books-list" class="list-group list-group-flush">
+                                <li id="selected-books-placeholder" class="list-group-item text-center text-muted">선택된 책이 없습니다.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 col-6 mx-auto mt-4">
+             <button type="submit" class="btn btn-primary btn-lg">독서 계획 생성하기</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 4. 문제가 되었던 스타일 추가 JavaScript는 제거하고, 나머지 기능만 남깁니다.
+
+    const searchBtn = document.getElementById('book-search-btn');
+    const searchInput = document.getElementById('book-search-query');
+    const searchResultsContainer = document.getElementById('search-results-container');
+    const searchPlaceholder = document.getElementById('search-placeholder');
+    const selectedBooksList = document.getElementById('selected-books-list');
+    const selectedBooksPlaceholder = document.getElementById('selected-books-placeholder');
+
+    const hiddenInput = document.getElementById('id_selected_books');
+    const selectedBookIds = new Set();
+
+
+    function addSelectedBook(id, title) {
+        if (selectedBookIds.has(id)) return; // 이미 있으면 추가 안함
+        
+        selectedBookIds.add(id); // Set에 ID 추가
+        if (selectedBooksPlaceholder) selectedBooksPlaceholder.style.display = 'none';
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.id = `selected-book-${id}`;
+        li.innerHTML = `
+            <span>${title}</span>
+            <button type="button" class="btn-close" aria-label="Close" data-book-id="${id}"></button>
+        `;
+        selectedBooksList.appendChild(li);
+        updateHiddenInput(); // 숨겨진 필드 업데이트
+    }
+
+    function removeSelectedBook(id) {
+        const itemToRemove = document.getElementById(`selected-book-${id}`);
+        if (itemToRemove) {
+            itemToRemove.remove();
+            selectedBookIds.delete(id.toString()); // Set에서 ID 제거
+        }
+        if (selectedBookIds.size === 0) {
+            if (selectedBooksPlaceholder) selectedBooksPlaceholder.style.display = 'block';
+        }
+        updateHiddenInput(); // 숨겨진 필드 업데이트
+    }
+
+    function updateHiddenInput() {
+        hiddenInput.value = Array.from(selectedBookIds).join(',');
+    }
+
+    searchBtn.addEventListener('click', performSearch);
+    searchInput.addEventListener('keydown', e => e.key === 'Enter' && (e.preventDefault(), performSearch()));
+
+    searchResultsContainer.addEventListener('change', e => {
+        if (e.target.matches('input[type="checkbox"]')) {
+            const bookId = e.target.value;
+            const bookTitle = e.target.dataset.title;
+            if (e.target.checked) {
+                addSelectedBook(bookId, bookTitle);
+            } else {
+                removeSelectedBook(bookId);
+            }
+        }
+    });
+    
+    selectedBooksList.addEventListener('click', e => {
+        if (e.target.matches('.btn-close')) {
+            const bookId = e.target.dataset.bookId;
+            removeSelectedBook(bookId);
+            const checkbox = searchResultsContainer.querySelector(`input[value="${bookId}"]`);
+            if (checkbox) checkbox.checked = false;
+        }
+    });
+
+    function performSearch() {
+        const query = searchInput.value.trim();
+        if (!query) return;
+        searchPlaceholder.textContent = '검색 중...';
+        searchResultsContainer.innerHTML = '';
+        fetch(`{% url 'plans:book_search_api' %}?query=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                searchPlaceholder.style.display = 'none';
+                if (data.books && data.books.length > 0) {
+                    data.books.forEach(book => {
+                        const isSelected = !!document.getElementById(`selected-book-${book.id}`);
+                        const div = document.createElement('div');
+                        div.className = 'form-check';
+                        div.innerHTML = `
+                            <input class="form-check-input" type="checkbox" name="books" value="${book.id}" id="book-${book.id}" data-title="${book.title}" ${isSelected ? 'checked' : ''}>
+                            <label class="form-check-label" for="book-${book.id}">${book.title} (${book.author})</label>
+                        `;
+                        searchResultsContainer.appendChild(div);
+                    });
+                } else {
+                    searchResultsContainer.innerHTML = '<p class="text-muted text-center">검색 결과가 없습니다.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResultsContainer.innerHTML = '<p class="text-danger text-center">검색 중 오류가 발생했습니다.</p>';
+            });
+    }
+
+    const starContainer = document.getElementById('star-rating-container');
+    const stars = starContainer.querySelectorAll('.bi-star-fill');
+    const difficultyInput = document.querySelector('[name="difficulty"]');
+    
+    function updateStars(rating) {
+        stars.forEach(star => {
+            star.classList.toggle('selected', parseInt(star.dataset.value) <= rating);
+        });
+    }
+
+    starContainer.addEventListener('mouseover', e => {
+        if (e.target.matches('.bi-star-fill')) {
+            const rating = parseInt(e.target.dataset.value);
+            stars.forEach(star => star.classList.toggle('hover', parseInt(star.dataset.value) <= rating));
+        }
+    });
+
+    starContainer.addEventListener('mouseout', () => stars.forEach(star => star.classList.remove('hover')));
+
+    starContainer.addEventListener('click', e => {
+        if (e.target.matches('.bi-star-fill')) {
+            const rating = parseInt(e.target.dataset.value);
+            difficultyInput.value = rating;
+            updateStars(rating);
+        }
+    });
+    updateStars(difficultyInput.value || 1);
+});
+</script>
+{% endblock %}

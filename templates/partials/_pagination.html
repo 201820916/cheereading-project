@@ -1,0 +1,48 @@
+{# templates/partials/_pagination.html #}
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4"> {# 페이지네이션 위 여백 추가 #}
+  <ul class="pagination justify-content-center">
+    {# 이전 페이지 링크 #}
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        {# [수정] page_query_name 변수를 사용하여 올바른 페이지 파라미터 생성 #}
+        <a class="page-link" href="?{{ page_query_name|default:'page' }}={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != page_query_name|default:'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link" aria-hidden="true">&laquo;</span>
+      </li>
+    {% endif %}
+
+    {# 페이지 번호 링크 #}
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        {# 현재 페이지 주변 3개 번호만 표시 #}
+        <li class="page-item">
+            {# [수정] page_query_name 변수 사용 #}
+            <a class="page-link" href="?{{ page_query_name|default:'page' }}={{ num }}{% for key, value in request.GET.items %}{% if key != page_query_name|default:'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {# 다음 페이지 링크 #}
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        {# [수정] page_query_name 변수 사용 #}
+        <a class="page-link" href="?{{ page_query_name|default:'page' }}={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != page_query_name|default:'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link" aria-hidden="true">&raquo;</span>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}

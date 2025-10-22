@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <h2>아이디 찾기 결과</h2>
+            {% if found_username %}
+                <div class="alert alert-success mt-4" role="alert">
+                    회원님의 아이디는 <strong>{{ found_username }}</strong> 입니다.
+                </div>
+            {% else %}
+                {# 이 경우는 views.py에서 처리하므로 실제로는 거의 보이지 않음 #}
+                <div class="alert alert-warning mt-4" role="alert">
+                    아이디를 찾는 데 실패했습니다.
+                </div>
+            {% endif %}
+            <hr>
+            <a href="{% url 'users:login' %}" class="btn btn-primary">로그인 페이지로 이동</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

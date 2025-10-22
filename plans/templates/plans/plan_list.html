@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"독서 계획" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+        border: 1px solid #dee2e6;
+    }
+    .plan-card:hover {
+        background-color: #f8f9fa;
+    }
+    .plan-card.active {
+        border-left: 5px solid var(--primary-color, #4A675A); /* 활성 테두리 색상 통일 */
+        background-color: #e7f1ff;
+    }
+    .content-placeholder {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        min-height: 300px;
+        background-color: #f8f9fa;
+        border-radius: .25rem;
+    }
+
+    /* ▼▼▼ [추가] 버튼 색상 테마 통일 ▼▼▼ */
+    /* 주 버튼 (새 계획 만들기) */
+    .btn-primary {
+        background-color: var(--primary-color, #4A675A);
+        border-color: var(--primary-color, #4A675A);
+    }
+    .btn-primary:hover {
+        background-color: #3B5043;
+        border-color: #3B5043;
+    }
+
+    /* 보조 버튼 (나의 북 플래닝 등) */
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+    
+    /* 성공 버튼 (북마크) - 주 버튼 색상으로 통일 */
+    .btn-success {
+        background-color: var(--primary-color, #4A675A);
+        border-color: var(--primary-color, #4A675A);
+    }
+    .btn-success:hover {
+        background-color: #3B5043;
+        border-color: #3B5043;
+    }
+
+    /* 정보 외곽선 버튼 (상세 보기) - 보조 버튼 색상으로 통일 */
+    .btn-outline-info {
+        color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-outline-info:hover {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+
+    /* 위험 외곽선 버튼 (북마크 취소) - 명확한 의미 전달을 위해 기존 색상 유지 */
+    .btn-outline-danger {
+        color: #dc3545;
+        border-color: #dc3545;
+    }
+    .btn-outline-danger:hover {
+        color: #fff;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    /* ▲▲▲ [추가] 버튼 색상 테마 통일 ▲▲▲ */
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>{{ page_title|default:"독서 계획" }}</h2>
+        
+        <div>
+            {% if page_title == '나의 북 플래닝' %}
+                <a href="{% url 'plans:plan_list' %}" class="btn btn-secondary me-2">전체 계획 탐색</a>
+            {% else %}
+                <a href="{% url 'plans:my_plans' %}" class="btn btn-secondary me-2">나의 북 플래닝</a>
+            {% endif %}
+            <a href="{% url 'plans:plan_create' %}" class="btn btn-primary">새 계획 만들기</a>
+        </div>
+    </div>
+    <hr class="mb-4">
+    
+    <div class="row">
+        <div class="col-md-5">
+            {% for plan in all_plans %}
+                <div class="card mb-2 plan-card {% if selected_plan and plan.id == selected_plan.id %}active{% endif %}"
+     data-url="?plan_id={{ plan.id }}">
+    <div class="card-body">
+        <h5 class="card-title">{{ plan.title }}</h5>
+        {% if selected_plan and plan.id == selected_plan.id and aggregated_feedback.satisfaction %}
+            <small class="text-muted d-block mb-1">참여자 만족도: <span class="text-info">{{ aggregated_feedback.satisfaction.text }} ({{ aggregated_feedback.satisfaction.percentage }}%)</span></small>
+        {% endif %}
+        <p class="card-text text-muted mb-1">{{ plan.description|truncatewords:15 }}</p>
+        <small class="text-muted">기간: {{ plan.start_date|date:"Y.m.d" }} ~ {{ plan.end_date|date:"Y.m.d" }}
+            {# ▼▼▼ [추가] 기간 피드백 (선택된 플랜일 때만) ▼▼▼ #}
+            {% if selected_plan and plan.id == selected_plan.id and aggregated_feedback.duration %}
+                <span class="text-info">({{ aggregated_feedback.duration.text }} {{ aggregated_feedback.duration.percentage }}%)</span>
+            {% endif %}
+        </small><br>
+        <small class="text-muted">난이도: {{ plan.get_difficulty_display }}
+             {# ▼▼▼ [추가] 난이도 피드백 (선택된 플랜일 때만) ▼▼▼ #}
+             {% if selected_plan and plan.id == selected_plan.id and aggregated_feedback.difficulty %}
+                 <span class="text-info">({{ aggregated_feedback.difficulty.text }} {{ aggregated_feedback.difficulty.percentage }}%)</span>
+             {% endif %}
+        </small>
+    </div>
+</div>
+            {% empty %}
+                <div class="text-center py-5 px-3 border rounded bg-light">
+                    <h4>아직 작성된 계획이 없습니다.</h4>
+                    <p class="text-muted mb-0">새 계획을 만들어 공유해보세요!</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="col-md-7">
+            {% if selected_plan %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ selected_plan.title }}</h4>
+                    <div class="d-flex align-items-center">
+                        {% if request.user != selected_plan.creator %}
+                            <form action="{% url 'plans:toggle_bookmark' selected_plan.id %}" method="post" class="d-inline me-2">
+                                {% csrf_token %}
+                                {% if request.user in selected_plan.participants.all %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">북마크 취소</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-success">북마크</button>
+                                {% endif %}
+                            </form>
+                        {% endif %}
+                        <a href="{% url 'plans:plan_detail' selected_plan.id %}" class="btn btn-sm btn-outline-info">상세 보기</a>
+                    </div>
+                </div>
+                <p class="text-muted mt-2">{{ selected_plan.description|linebreaksbr }}</p>
+                <hr>
+
+                <h5>📗 포함된 책 목록</h5>
+                <div class="list-group mb-4">
+                    {% for plan_book in selected_plan.plan_books.all %}
+                        
+                        {% if plan_book.book %}
+                            <a href="{% url 'books:book_detail' plan_book.book.id %}" class="list-group-item list-group-item-action">
+                                {{ plan_book.book.title }}
+                            </a>
+                        {% endif %}
+
+                    {% empty %}
+                        <div class="list-group-item">아직 추가된 책이 없습니다.</div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="content-placeholder">
+                    <div class="text-center">
+                        <p class="h5 text-muted">왼쪽에서 계획을 선택해주세요.</p>
+                        <small class="text-muted">선택한 계획의 상세 정보를 여기서 확인할 수 있습니다.</small>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const planCards = document.querySelectorAll('.plan-card');
+        planCards.forEach(function(card) {
+            card.addEventListener('click', function() {
+                const url = this.dataset.url;
+                if (url) {
+                    window.location.href = url;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

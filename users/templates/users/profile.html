@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div class="profile-main-container mb-3">
+                        <div class="profile-image-container">
+                            {% if user.profile.image %}
+                                <img src="{{ user.profile.image.url }}" alt="프로필 사진">
+                            {% else %}
+                                <div class="no-image-placeholder"><span>No Image</span></div>
+                            {% endif %}
+                        </div>
+                        {% if primary_badge and primary_badge.icon %}
+                            <div class="primary-badge-container">
+                                <img src="{{ primary_badge.icon.url }}" alt="{{ primary_badge.name }} 뱃지" class="img-fluid" title="{{ primary_badge.name }}">
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h5 class="my-3">{{ user.nickname }}</h5>
+                    <p class="text-muted mb-4">{{ user.profile.bio|default:"자기소개가 없습니다." }}</p>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'users:profile_update' %}" class="btn btn-primary">프로필 수정</a>
+                    </div>
+
+                    {% if user_badges %}
+                        <hr>
+                        <div class="my-badges-section text-center">
+                            <h6 class="mb-2">⭐ 소유중인 뱃지</h6>
+                            <div class="badges-carousel-wrapper">
+                                <button class="carousel-arrow left" id="badges-scroll-left">&lt;</button>
+                                <div class="badges-carousel" id="badges-carousel-container">
+                                    {% for user_badge in user_badges %}
+                                        <span class="profile-badge badge-item" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user_badge.badge.description }}">
+                                            {{ user_badge.badge.name }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                                <button class="carousel-arrow right" id="badges-scroll-right">&gt;</button>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="myLibraryTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="library-tab" data-bs-toggle="tab" data-bs-target="#library-pane" type="button" role="tab">내 서재</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="wishlist-tab" data-bs-toggle="tab" data-bs-target="#wishlist-pane" type="button" role="tab">위시리스트</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3" id="myLibraryTabContent">
+                        <div class="tab-pane fade show active" id="library-pane" role="tabpanel">
+                            {% include 'users/_my_library_partial.html' with reading_entries_page=reading_entries_page %}
+                        </div>
+                        <div class="tab-pane fade" id="wishlist-pane" role="tabpanel">
+                            {% include 'users/_wishlist_partial.html' with wishlist_page=wishlist_page %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">독서 활동 요약</h5>
+                <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#statsModal">
+                    <i class="bi bi-gear-fill"></i>
+                </button>
+            </div>
+
+            {% if 'genre' in preferred_stats %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h6>선호 장르</h6><hr>
+                    {% if genre_labels %}<div style="max-width: 350px; margin: auto;"><canvas id="genreChart"></canvas></div>
+                    {% else %}<div class="text-center text-muted p-4"><p>독서 기록이 부족하여<br>선호 장르를 분석할 수 없습니다.</p></div>{% endif %}
+                    <div class="text-center mt-4 border-top pt-3">
+                        <h6>총 읽은 권수</h6><p class="h4 mb-0">{{ total_books_read }}권</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if 'rating' in preferred_stats %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">나의 별점 분포</h5><hr>
+                    <canvas id="ratingDistributionChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if 'monthly' in preferred_stats %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">월별 독서량 (지난 1년)</h5><hr>
+                    <canvas id="monthlyReadingChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if 'keywords' in preferred_stats %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-0">나의 독서 키워드</h5><hr>
+                    {% if wordcloud_data %}<div id="wordcloud-container" style="width: 100%; height: 300px;"></div>
+                    {% else %} <div class="text-center text-muted p-4" style="height: 300px; display: flex; align-items-center; justify-content: center;"><p>키워드 클라우드를 생성하기에<br>독서 기록이 부족합니다.</p></div> {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if 'genre_bias' in preferred_stats %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">🧐 장르별 편향 분석</h5><hr>
+        {% if genre_bias_analysis_text %}
+            <div class="alert alert-info small">{{ genre_bias_analysis_text|safe }}</div>
+        {% endif %}
+
+        <ul class="list-group list-group-flush">
+            {% for stat in genre_bias_stats|slice:":5" %} {# 상위 5개만 표시 #}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <span>{{ stat.name }} <small class="text-muted">({{ stat.book_count }}권)</small></span>
+                <span class="badge bg-warning text-dark">평균 {{ stat.avg_rating|floatformat:1 }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% else %}
+    {# 통계 데이터가 없을 때 (예: 독서 기록 부족) 메시지 표시 (선택 사항) #}
+    <div class="card mb-4">
+         <div class="card-body text-center text-muted p-4">
+            <p>장르별 편향 분석을 위한 독서 기록이 부족합니다.</p>
+        </div>
+    </div>
+{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="statsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">통계 표시 설정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>프로필에 표시할 통계를 최대 3개까지 선택하세요.</p>
+                <form id="stats-form">
+                    {% csrf_token %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="genre" id="check-genre" {% if 'genre' in preferred_stats %}checked{% endif %}>
+                        <label class="form-check-label" for="check-genre">선호 장르</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="rating" id="check-rating" {% if 'rating' in preferred_stats %}checked{% endif %}>
+                        <label class="form-check-label" for="check-rating">나의 별점 분포</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="monthly" id="check-monthly" {% if 'monthly' in preferred_stats %}checked{% endif %}>
+                        <label class="form-check-label" for="check-monthly">월별 독서량</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="keywords" id="check-keywords" {% if 'keywords' in preferred_stats %}checked{% endif %}>
+                        <label class="form-check-label" for="check-keywords">나의 독서 키워드</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="genre_bias" id="check-genre-bias" {% if 'genre_bias' in preferred_stats %}checked{% endif %}>
+                        <label class="form-check-label" for="check-genre-bias">장르별 편향 분석</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" id="save-stats-btn">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+
+{% block scripts %}
+<style>
+    :root {
+        --primary-color: #4A6253;
+        --card-background: #FFFFFF;
+        --text-color: #4E443A;
+        --border-radius-soft: 12px;
+        --soft-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        --subtle-border-color: #E0DACE;
+        --subtle-bg-color: #F5EFE6;
+    }
+    .card {
+        border: none;
+        border-radius: var(--border-radius-soft);
+        box-shadow: var(--soft-shadow);
+        transition: transform 0.3s ease;
+    }
+    .card:hover { transform: translateY(-5px); }
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        font-weight: 700;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        background-color: #3B5043;
+        border-color: #3B5043;
+    }
+    hr {
+        border: 0;
+        height: 1px;
+        background-image: linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.1), rgba(0,0,0,0));
+    }
+    .profile-image-container {
+        width: 150px; height: 150px; border-radius: 50%;
+        overflow: hidden; background-color: var(--subtle-bg-color);
+        display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+    }
+    .profile-image-container img { width: 100%; height: 100%; object-fit: cover; }
+    .no-image-placeholder { color: #6c757d; font-size: 1.2rem; }
+    .my-badges-section { margin-top: 15px; }
+    .badges-carousel-wrapper { display: flex; align-items: center; position: relative; }
+    .badges-carousel {
+        display: flex; overflow-x: scroll; scroll-behavior: smooth; padding: 5px 0;
+        gap: 8px; flex-wrap: nowrap; flex-grow: 1; justify-content: center;
+        scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .badges-carousel::-webkit-scrollbar { display: none; }
+    .carousel-arrow {
+        background: rgba(74, 98, 83, 0.08); border: 1px solid var(--subtle-border-color);
+        color: var(--primary-color); font-size: 1.2rem; line-height: 1; cursor: pointer;
+        padding: 5px; border-radius: 50%; width: 30px; height: 30px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .carousel-arrow.left { margin-right: 5px; }
+    .carousel-arrow.right { margin-left: 5px; }
+    .profile-badge.badge-item { flex-shrink: 0; }
+    .profile-badge {
+        font-size: 0.8rem; font-weight: 600; padding: 5px 10px;
+        background-color: var(--subtle-bg-color); color: var(--text-color);
+        border-radius: 15px; display: inline-block; margin: 3px;
+        border: 1px solid var(--subtle-border-color);
+    }
+    .profile-main-container { display: flex; justify-content: center; align-items: center; gap: 15px; }
+    .primary-badge-container {
+        width: 80px; height: 80px; box-shadow: var(--soft-shadow);
+        border-radius: 50%; padding: 5px; background-color: #fff;
+    }
+    .primary-badge-container img { border-radius: 50%; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
+
+{{ genre_labels|json_script:"genre-labels" }}
+{{ genre_data|json_script:"genre-data" }}
+{{ monthly_labels|json_script:"monthly-labels" }}
+{{ monthly_data|json_script:"monthly-data" }}
+{{ wordcloud_data|json_script:"wordcloud-data" }}
+{{ rating_labels|json_script:"rating-labels" }}
+{{ rating_data|json_script:"rating-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. 선호 장르 차트
+    try {
+        const genreLabels = JSON.parse(document.getElementById('genre-labels').textContent);
+        const genreData = JSON.parse(document.getElementById('genre-data').textContent);
+        const genreCtx = document.getElementById('genreChart');
+        if (genreCtx && genreLabels.length > 0) {
+            new Chart(genreCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: genreLabels,
+                    datasets: [{
+                        label: ' 읽은 권수', data: genreData,
+                        backgroundColor: ['#4A6253', '#7D6E63', '#A8998A', '#D4C8BC', '#E0DACE'],
+                        borderColor: '#fff', borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'right' } } }
+            });
+        }
+    } catch (e) { console.error("장르 차트 렌더링 오류:", e); }
+
+    // 2. 월별 독서량 차트
+    try {
+        const monthlyLabels = JSON.parse(document.getElementById('monthly-labels').textContent);
+        const monthlyData = JSON.parse(document.getElementById('monthly-data').textContent);
+        const monthlyCtx = document.getElementById('monthlyReadingChart');
+        if (monthlyCtx) {
+            new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [{
+                        label: '월별 독서량', data: monthlyData,
+                        backgroundColor: 'rgba(74, 98, 83, 0.6)',
+                        borderColor: 'rgba(74, 98, 83, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+            });
+        }
+    } catch (e) { console.error("월별 독서량 차트 렌더링 오류:", e); }
+
+    // 3. 나의 별점 분포 차트
+    try {
+        const ratingLabels = JSON.parse(document.getElementById('rating-labels').textContent);
+        const ratingData = JSON.parse(document.getElementById('rating-data').textContent);
+        const ratingCtx = document.getElementById('ratingDistributionChart');
+        if (ratingCtx) {
+            new Chart(ratingCtx, {
+                type: 'bar',
+                data: {
+                    labels: ratingLabels.map(label => `${label}점`),
+                    datasets: [{
+                        label: '권수', data: ratingData,
+                        backgroundColor: 'rgba(125, 110, 99, 0.6)',
+                        borderColor: 'rgba(125, 110, 99, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+            });
+        }
+    } catch (e) { console.error("별점 분포 차트 렌더링 오류:", e); }
+
+    // 4. 나의 독서 키워드
+    try {
+        const wordcloudContainer = document.getElementById('wordcloud-container');
+        const wordcloudData = JSON.parse(document.getElementById('wordcloud-data').textContent);
+        if (wordcloudContainer && typeof WordCloud !== 'undefined' && wordcloudData.length > 0) {
+            WordCloud(wordcloudContainer, { 
+                list: wordcloudData,
+                fontFamily: 'Noto Sans KR, sans-serif',
+                fontWeight: 600,
+                color: 'random-dark',
+                backgroundColor: 'transparent'
+             });
+        }
+    } catch (e) { console.error("워드클라우드 렌더링 오류:", e); }
+
+    // 5. 뱃지 캐러셀 스크롤
+    const badgesCarousel = document.getElementById('badges-carousel-container');
+    const scrollLeftBtn = document.getElementById('badges-scroll-left');
+    const scrollRightBtn = document.getElementById('badges-scroll-right');
+    if (badgesCarousel && scrollLeftBtn && scrollRightBtn) {
+        const scrollAmount = 150;
+        scrollLeftBtn.addEventListener('click', () => { badgesCarousel.scrollBy({ left: -scrollAmount, behavior: 'smooth' }); });
+        scrollRightBtn.addEventListener('click', () => { badgesCarousel.scrollBy({ left: scrollAmount, behavior: 'smooth' }); });
+    }
+
+    // 6. 통계 설정 저장 (수정)
+    const saveBtn = document.getElementById('save-stats-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#stats-form .form-check-input:checked');
+            if (checkboxes.length > 3) {
+                alert('최대 3개까지만 선택할 수 있습니다.');
+                return;
+            }
+            const selectedStats = Array.from(checkboxes).map(cb => cb.value);
+            const csrfToken = document.querySelector('#stats-form input[name=csrfmiddlewaretoken]');
+            
+            fetch("{% url 'users:update_stats_visibility' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken ? csrfToken.value : ''
+                },
+                body: JSON.stringify({ visible_stats: selectedStats })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') { 
+                    location.reload(); 
+                } else { 
+                    alert('저장에 실패했습니다: ' + (data.message || '알 수 없는 오류')); 
+                }
+            })
+            .catch(error => {
+                console.error("Error saving stats:", error);
+                alert('저장 중 오류가 발생했습니다.');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% autoescape off %}
+안녕하세요, {{ user.username }}님!
+
+CheerReading에 가입해주셔서 감사합니다.
+아래 링크를 클릭하여 이메일 인증을 완료하고 회원가입을 마무리해주세요.
+
+http://{{ domain }}{% url 'users:activate' uidb64=uid token=token %}
+
+감사합니다.
+{% endautoescape %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <h2>회원가입 완료</h2>
+            <p class="lead">Cheereading의 회원이 되신 것을 환영합니다!</p>
+            <p>가입 시 입력하신 이메일로 인증 메일을 발송했습니다. 메일함을 확인하여 계정을 활성화해주세요.</p>
+            <hr>
+            <a href="{% url 'users:login' %}" class="btn btn-primary">로그인 페이지로 이동</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

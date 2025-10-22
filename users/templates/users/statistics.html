@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}나의 독서 통계{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h2>나의 독서 통계</h2>
+        <p class="text-muted">나의 독서 습관을 데이터로 확인해보세요.</p>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">🧐 장르별 편향 분석</h5>
+        </div>
+        <div class="card-body">
+            {% if genre_stats %}
+                {# 분석 문구가 있다면 표시 #}
+                {% if analysis_text %}
+                    <div class="alert alert-info">
+                        {{ analysis_text|safe }}
+                    </div>
+                {% endif %}
+
+                <ul class="list-group list-group-flush">
+                    {% for stat in genre_stats %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold fs-5">{{ stat.name }}</span>
+                                <small class="text-muted ms-2">({{ stat.book_count }}권 읽음)</small>
+                            </div>
+                            <div>
+                                <span class="badge bg-warning text-dark rounded-pill fs-6">
+                                    평균 {{ stat.avg_rating|floatformat:1 }}점
+                                </span>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+            {% else %}
+                <div class="text-center p-4">
+                    <p class="text-muted">아직 장르별 통계를 만들기에 데이터가 부족합니다. 책을 더 읽고 리뷰를 남겨주세요!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    </div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="profile-header mb-4">
+        <h2>{{ user.username }}님의 서재</h2>
+        <p class="text-muted">읽은 책과 읽고 싶은 책을 관리합니다.</p>
+    </div>
+
+    <ul class="nav nav-tabs mb-4" id="myLibraryTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="finished-tab" data-bs-toggle="tab" data-bs-target="#finished-books" type="button" role="tab" aria-controls="finished-books" aria-selected="true">
+                📚 내 서재 (읽은 책)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="wishlist-tab" data-bs-toggle="tab" data-bs-target="#wishlist-books" type="button" role="tab" aria-controls="wishlist-books" aria-selected="false">
+                ⭐ 위시리스트
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="myLibraryTabContent">
+        
+        <div class="tab-pane fade show active" id="finished-books" role="tabpanel" aria-labelledby="finished-tab">
+            <div class="row">
+                {% for entry in finished_books_page %}
+                    <div class="col-lg-3 col-md-4 col-6 mb-4">
+                        <div class="card h-100">
+                            <a href="{% url 'books:book_detail' entry.book.id %}">
+                                {% if entry.book.cover_image_url %}
+                                    <img src="{{ entry.book.cover_image_url }}" class="card-img-top" alt="{{ entry.book.title }}">
+                                {% else %}
+                                    <div class="no-image-card">No Image</div>
+                                {% endif %}
+                            </a>
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="card-title">{{ entry.book.title|truncatechars:25 }}</h6>
+                                <p class="card-text text-muted small">{{ entry.book.author|truncatechars:15 }}</p>
+                                <div class="mt-auto pt-2">
+                                    <a href="{% url 'books:edit_reading_entry' entry.id %}" class="btn btn-sm btn-outline-secondary">수정</a>
+                                    <form action="{% url 'books:delete_reading_entry' entry.id %}" method="POST" class="d-inline" onsubmit="return confirm('정말로 이 기록을 삭제하시겠습니까?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <p class="text-muted">아직 서재에 등록된 책이 없습니다.</p>
+                    </div>
+                {% endfor %}
+            </div>
+            {% include 'partials/_pagination.html' with page_obj=finished_books_page page_query_name='page_finished' %}
+        </div>
+
+        <div class="tab-pane fade" id="wishlist-books" role="tabpanel" aria-labelledby="wishlist-tab">
+            <div class="list-group">
+                {% for item in wishlist_items_page %}
+                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <a href="{% url 'books:book_detail' item.book.id %}" class="d-flex align-items-center text-decoration-none text-dark flex-grow-1">
+                            {% if item.book.cover_image_url %}
+                                <img src="{{ item.book.cover_image_url }}" alt="{{ item.book.title }}" style="width: 40px; height: auto; margin-right: 15px;">
+                            {% else %}
+                                <div class="no-image-list">NoImg</div>
+                            {% endif %}
+                            <div>
+                                <h6 class="mb-1">{{ item.book.title }}</h6>
+                                <small class="text-muted">{{ item.book.author }}</small>
+                            </div>
+                        </a>
+                        <form action="{% url 'books:remove_from_wishlist' item.book.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">위시리스트에 담은 책이 없습니다.</p>
+                {% endfor %}
+            </div>
+            {% include 'partials/_pagination.html' with page_obj=wishlist_items_page page_query_name='page_wishlist' %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .no-image-card { height: 250px; background-color: #eee; display: flex; align-items: center; justify-content: center; }
+    .no-image-list { width: 40px; min-width: 40px; height: 60px; background-color: #eee; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 0.8rem; text-align: center; }
+</style>
+{% endblock %}

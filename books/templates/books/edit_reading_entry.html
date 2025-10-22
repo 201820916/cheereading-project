@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h3 class="mb-4">리뷰 수정하기</h3>
+
+            <div class="card mb-4">
+                <div class="card-body d-flex">
+                    <img src="{{ book.cover_image_url }}" alt="{{ book.title }}" style="width: 100px; height: auto; margin-right: 20px;">
+                    <div>
+                        <h4>{{ book.title }}</h4>
+                        <p class="text-muted mb-1">지은이: {{ book.author }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="form-label">별점 <span class="text-danger">*</span></label>
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <span class="star" data-value="1">☆</span>
+                            <span class="star" data-value="2">☆</span>
+                            <span class="star" data-value="3">☆</span>
+                            <span class="star" data-value="4">☆</span>
+                            <span class="star" data-value="5">☆</span>
+                        </div>
+                        <span id="rating-text" class="ms-2 text-muted"></span>
+                    </div>
+                    {{ form.rating }} </div>
+
+                <div class="mb-3">
+                    {{ form.review.label_tag }} <span class="text-danger">*</span>
+                    {{ form.review }}
+                                {% if form.review.errors %}
+                <div class="alert alert-danger mt-2">
+                    {% for error in form.review.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.detailed_review.label_tag }}
+                    {{ form.detailed_review }}
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">수정 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .star { font-size: 2rem; cursor: pointer; color: #ddd; }
+    .star.filled { color: #f5c518; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const stars = document.querySelectorAll('.star');
+        const ratingInput = document.getElementById('id_rating');
+        const ratingText = document.getElementById('rating-text');
+        
+        // 페이지 로드 시 기존 별점을 표시하는 함수
+        function setStars(value) {
+            ratingInput.value = value;
+            if (value > 0) {
+                ratingText.textContent = `(${value}/5점)`;
+            }
+            stars.forEach(s => {
+                s.classList.toggle('filled', s.dataset.value <= value);
+            });
+        }
+        
+        // 초기에 저장된 별점 값으로 별을 채웁니다.
+        const initialRating = ratingInput.value;
+        if (initialRating) {
+            setStars(initialRating);
+        }
+
+        // 별 클릭 이벤트
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                setStars(this.dataset.value);
+            });
+        });
+    });
+</script>
+{% endblock %}

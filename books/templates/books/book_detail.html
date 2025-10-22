@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        {# --- 왼쪽 컬럼: 책 표지 및 독자 통계 --- #}
+        <div class="col-md-4">
+            {% if book.cover_image_url %}
+                <img src="{{ book.cover_image_url }}" alt="{{ book.title }} 표지" class="img-fluid rounded shadow-sm mb-4">
+            {% else %}
+                <div class="no-image mb-4" style="width:100%; height:450px; background-color:#eee; display:flex; align-items:center; justify-content:center; border-radius:8px;">No Image</div>
+            {% endif %}
+
+            {% if total_readers > 1 %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-center text-muted mb-3">📊 이 책을 읽은 독자 통계</h6>
+                    <div id="readerStatsCarousel" class="carousel slide">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <h6 class="text-center small">성별 분포</h6>
+                                <canvas id="genderDistributionChart" style="max-height: 200px;"></canvas>
+                            </div>
+                            <div class="carousel-item">
+                                <h6 class="text-center small">연령대 분포</h6>
+                                <canvas id="ageDistributionChart" style="max-height: 200px;"></canvas>
+                            </div>
+                        </div>
+                        <button class="carousel-control-prev stats-carousel-control" type="button" data-bs-target="#readerStatsCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        </button>
+                        <button class="carousel-control-next stats-carousel-control" type="button" data-bs-target="#readerStatsCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">총 {{ total_readers }}명이 읽었습니다.</small>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center text-muted p-4">
+                    <p class="mb-0">더 많은 독자들이 이 책을 읽으면<br>통계 정보가 표시됩니다.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# --- 오른쪽 컬럼: 책 정보, 버튼, 리뷰 등 --- #}
+        <div class="col-md-8">
+            <h2>{{ book.title }}</h2>
+            <p class="meta">
+                <strong>저자:</strong> {{ book.author|default:"정보 없음" }} <br>
+            </p>
+            <p class="description">
+                {{ book.summary|linebreaksbr|default:"책 소개가 없습니다." }}
+            </p>
+
+            {# ▼▼▼ [수정] 중복된 책 정보 블록 삭제 ▼▼▼ #}
+            
+            {# --- 서재/위시리스트 버튼 --- #}
+            <div class="my-4 book-actions">
+                {% if user.is_authenticated %}
+                    {% if is_in_library %}
+                        <form action="{% url 'books:delete_reading_entry' user_review.id %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary me-2">
+                                    <i class="bi bi-journal-check"></i> 내 서재에서 제거
+                                </button>
+                            </form>
+                        {% else %}
+                         <a href="{% url 'books:add_reading_entry' book.id %}" class="btn btn-success me-2"><i class="bi bi-journal-plus"></i> 내 서재에 추가</a>
+                    {% endif %}
+
+                    {% if is_in_wishlist %}
+                         <form action="{% url 'books:remove_from_wishlist' book.id %}" method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-heart-fill"></i> 위시리스트 제거</button>
+                         </form>
+                    {% else %}
+                        <form action="{% url 'books:add_to_wishlist' book.id %}" method="POST" class="d-inline">
+                           {% csrf_token %}
+                           <button type="submit" class="btn btn-danger"><i class="bi bi-heart"></i> 위시리스트 추가</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">로그인 후 서재 및 위시리스트 기능을 이용할 수 있습니다.</p>
+                {% endif %}
+            </div>
+
+            <hr> {# 버튼과 리뷰 섹션 구분 #}
+
+            {# --- 내 리뷰 섹션 --- #}
+            <div class="my-4">
+                <div class="my-review">
+                    <h4>📝 내 리뷰</h4>
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            {% if user.is_authenticated %}
+                                {% if user_review %}
+                                    <h5 class="card-title">별점: {{ user_review.rating }}/5</h5>
+                                    <div class="review-content-wrapper">
+                                        <div class="review-content short-review active">
+                                            <p class="card-text"><strong>{{ user_review.review }}</strong></p>
+                                        </div>
+                                        {% if user_review.detailed_review %}
+                                        <div class="review-content detailed-review">
+                                            <p class="card-text text-muted">{{ user_review.detailed_review|linebreaksbr }}</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ user_review.read_date|date:"Y-m-d" }} 작성</small>
+                                    <div class="mt-2">
+                                        <a href="{% url 'books:edit_reading_entry' entry_id=user_review.id %}" class="btn btn-sm btn-outline-secondary">수정</a>
+                                        <form action="{% url 'books:delete_reading_entry' user_review.id %}" method="POST" class="d-inline" onsubmit="return confirm('정말로 이 리뷰를 삭제하시겠습니까?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                                        </form>
+                                        {% if user_review.detailed_review %}
+                                        <button class="btn btn-sm btn-outline-info toggle-review-btn">상세평 보기</button>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    {% if is_in_library %}
+                                        <p class="text-muted">아직 이 책에 대한 리뷰를 작성하지 않으셨습니다.</p>
+                                        <a href="{% url 'books:add_reading_entry' book.id %}" class="btn btn-sm btn-primary">리뷰 작성하기</a>
+                                    {% else %}
+                                        <div class="card-body d-flex align-items-center justify-content-center">
+                                            <p class="text-muted mb-0">내 서재에 추가한 책만 리뷰를 작성할 수 있습니다.</p>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <p class="text-muted">로그인 후 내 리뷰를 확인하거나 작성할 수 있습니다.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="mt-5">
+{# ▼▼▼ 다른 사용자 리뷰 섹션 추가 ▼▼▼ #}
+            <div class="all-reviews-section mt-4">
+                <h4>👥 다른 사용자들의 리뷰</h4>
+                {% if other_reviews %}
+                    {% for review in other_reviews %}
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>{{ review.user.nickname|default:review.user.username }}</strong>
+                                    <small class="text-muted">{{ review.read_date|date:"Y.m.d" }}</small>
+                                </div>
+                                <div class="mb-2">
+                                    {# 별점 표시 #}
+                                    {% for i in "12345" %}
+                                        <i class="bi {% if i|add:0 <= review.rating %}bi-star-fill text-warning{% else %}bi-star{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                                <p class="card-text">{{ review.review }}</p>
+                                
+                                {# 상세평이 있는 경우 표시 #}
+                                {% if review.detailed_review %}
+                                    <div class="detailed-review-content text-muted small mt-2" style="border-left: 3px solid #eee; padding-left: 10px;">
+                                        {{ review.detailed_review|linebreaksbr }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="card shadow-sm">
+                        <div class="card-body text-center text-muted">
+                            <p class="mb-0">아직 다른 사용자의 리뷰가 없습니다.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {# ▲▲▲ 다른 사용자 리뷰 섹션 추가 ▲▲▲ #}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ gender_labels|json_script:"gender-labels-data" }}
+{{ gender_data|json_script:"gender-data-data" }}
+{{ age_labels|json_script:"age-labels-data" }}
+{{ age_data|json_script:"age-data-data" }}
+
+<style>
+    .stats-carousel-control { width: 15%; }
+    .stats-carousel-control .carousel-control-prev-icon,
+    .stats-carousel-control .carousel-control-next-icon {
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 50%;
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    .review-content {
+        display: none; /* 기본적으로 모든 리뷰 내용은 숨김 */
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+    .review-content.active {
+        display: block; /* active 클래스가 붙은 내용만 보여줌 */
+        opacity: 1;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const genderCtx = document.getElementById('genderDistributionChart');
+        if (genderCtx) {
+            const genderLabels = JSON.parse(document.getElementById('gender-labels-data').textContent);
+            const genderData = JSON.parse(document.getElementById('gender-data-data').textContent);
+            if (genderData.length > 0) {
+                new Chart(genderCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: genderLabels,
+                        datasets: [{ data: genderData, backgroundColor: ['#4A6253', '#A8998A', '#D4C8BC'], borderColor: '#fff', borderWidth: 2 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+                });
+            }
+        }
+
+        const ageCtx = document.getElementById('ageDistributionChart');
+        if (ageCtx) {
+            const ageLabels = JSON.parse(document.getElementById('age-labels-data').textContent);
+            const ageData = JSON.parse(document.getElementById('age-data-data').textContent);
+            if (ageData.length > 0) {
+                new Chart(ageCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ageLabels,
+                        datasets: [{ label: '인원', data: ageData, backgroundColor: 'rgba(125, 110, 99, 0.6)', borderWidth: 0 }]
+                    },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Chart rendering error:", e);
+    }
+
+    const toggleButtons = document.querySelectorAll('.toggle-review-btn');
+
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // 클릭된 버튼이 속한 카드(card-body)를 찾습니다.
+            const cardBody = this.closest('.card-body');
+            
+            // 해당 카드 안의 짧은 리뷰와 상세 리뷰를 찾습니다.
+            const shortReview = cardBody.querySelector('.short-review');
+            const detailedReview = cardBody.querySelector('.detailed-review');
+
+            // 현재 '상세평 보기' 상태인지 텍스트로 확인
+            const isShowingShortReview = this.textContent === '상세평 보기';
+
+            if (isShowingShortReview) {
+                // 상세평 보여주기
+                shortReview.classList.remove('active');
+                detailedReview.classList.add('active');
+                this.textContent = '100자평 보기'; // 버튼 텍스트 변경
+            } else {
+                // 100자평 보여주기
+                detailedReview.classList.remove('active');
+                shortReview.classList.add('active');
+                this.textContent = '상세평 보기'; // 버튼 텍스트 원래대로
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
