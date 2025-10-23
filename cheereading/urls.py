@@ -11,8 +11,13 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('books/', include('books.urls')),
     path('plans/', include('plans.urls')),
+    path('', redirect_to_login),
     # ... 기타 다른 앱들의 URL ...
 ]
 
+def redirect_to_login(request):
+    return redirect('/users/login/')
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
