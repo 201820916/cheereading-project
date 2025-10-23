@@ -92,7 +92,7 @@ WSGI_APPLICATION = 'cheereading.wsgi.application'
 # settings.py
 
 DATABASES = {
-    'default': dj_database-url.config(
+    'default': dj_database_url.config(
         # Render 대시보드에 설정한 'DATABASE_URL' 환경 변수를 읽어옵니다.
         default=os.environ.get('DATABASE_URL'),
         
