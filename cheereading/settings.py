@@ -27,11 +27,15 @@ SECRET_KEY = 'django-insecure-3r-ary4or_!rp%7c7ywz86@(0fj9$tyw02q-f(85(c!$8g^as7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# 1. 먼저 빈 리스트로 정의합니다.
+ALLOWED_HOSTS = []
+
+# 2. 그 다음에 Render의 호스트네임을 .append() 합니다.
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# 개발 환경을 위해 localhost도 추가해두는 것이 좋습니다. (선택 사항)
+# 3. (선택 사항) localhost 등을 .append() 합니다.
 ALLOWED_HOSTS.append('127.0.0.1')
 ALLOWED_HOSTS.append('localhost')
 
