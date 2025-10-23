@@ -3,6 +3,11 @@ from django.urls import path, include
 from django.conf import settings # settings를 import
 from django.conf.urls.static import static # static 함수를 import
 
+
+def redirect_to_login(request):
+    return redirect('/users/login/')
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     
@@ -15,8 +20,7 @@ urlpatterns = [
     # ... 기타 다른 앱들의 URL ...
 ]
 
-def redirect_to_login(request):
-    return redirect('/users/login/')
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
