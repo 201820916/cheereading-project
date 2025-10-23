@@ -27,7 +27,13 @@ SECRET_KEY = 'django-insecure-3r-ary4or_!rp%7c7ywz86@(0fj9$tyw02q-f(85(c!$8g^as7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['cheereading-project-1.onrender.com', '127.0.0.1', 'localhost']
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# 개발 환경을 위해 localhost도 추가해두는 것이 좋습니다. (선택 사항)
+ALLOWED_HOSTS.append('127.0.0.1')
+ALLOWED_HOSTS.append('localhost')
 
 
 # Application definition
