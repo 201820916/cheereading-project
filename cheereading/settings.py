@@ -96,15 +96,18 @@ DATABASES = {
         # Render 대시보드에 설정한 'DATABASE_URL' 환경 변수를 읽어옵니다.
         default=os.environ.get('DATABASE_URL'),
         
-        # Google Cloud SQL은 SSL 연결이 필수입니다.
-        ssl_require=True,
+        # ⚠️ [수정] 이 줄을 삭제하거나 주석 처리합니다:
+        # ssl_require=True, 
     )
 }
 
-# GCSQL 같은 외부 DB는 연결이 끊어질 수 있으므로,
-# 연결을 재사용하는 옵션을 켜주는 것이 좋습니다. (선택 사항이지만 권장)
-DATABASES['default']['CONN_MAX_AGE'] = 600
+# ⚠️ [추가] GCSQL + MySQL을 위한 올바른 SSL 설정을 수동으로 추가합니다.
+# (DATABASE_URL에 'mysql'이 포함되어 있을 경우에만 적용)
+if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
+    DATABASES['default'].setdefault('OPTIONS', {})['ssl_mode'] = 'REQUIRED'
 
+# 연결 풀링 (권장)
+DATABASES['default']['CONN_MAX_AGE'] = 600
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
