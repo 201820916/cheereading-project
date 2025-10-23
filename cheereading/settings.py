@@ -26,7 +26,11 @@ SECRET_KEY = 'django-insecure-3r-ary4or_!rp%7c7ywz86@(0fj9$tyw02q-f(85(c!$8g^as7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['.elasticbeanstalk.com']
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "cheereading-project-1.onrender.com",
+]
 
 
 # Application definition
