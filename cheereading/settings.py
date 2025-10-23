@@ -91,18 +91,18 @@ WSGI_APPLICATION = 'cheereading.wsgi.application'
 # settings.py
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql', # 사용할 엔진 지정
-        'NAME': 'cheereading',             # 데이터베이스 이름
-        'USER': 'root',               # DB 접속 계정
-        'PASSWORD': 'tjdgns03@',           # DB 접속 비밀번호
-        'HOST': 'localhost',                 # DB 서버 주소 (로컬이면 localhost 또는 127.0.0.1)
-        'PORT': '3306',                      # DB 포트 번호 (MariaDB/MySQL 기본값은 3306)
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'" # MySQL 엄격 모드 설정 (권장)
-        }
-    }
+    'default': dj_database-url.config(
+        # Render 대시보드에 설정한 'DATABASE_URL' 환경 변수를 읽어옵니다.
+        default=os.environ.get('DATABASE_URL'),
+        
+        # Google Cloud SQL은 SSL 연결이 필수입니다.
+        ssl_require=True,
+    )
 }
+
+# GCSQL 같은 외부 DB는 연결이 끊어질 수 있으므로,
+# 연결을 재사용하는 옵션을 켜주는 것이 좋습니다. (선택 사항이지만 권장)
+DATABASES['default']['CONN_MAX_AGE'] = 600
 
 
 # Password validation
