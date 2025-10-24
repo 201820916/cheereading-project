@@ -1,18 +1,25 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings # settings를 import
-from django.conf.urls.static import static # static 함수를 import
+from django.conf import settings
+from django.conf.urls.static import static
+from django.shortcuts import redirect  # 🔹 필수 import
+
+# 🔹 루트(/) 접근 시 로그인 페이지로 리디렉트
+def redirect_to_login(request):
+    return redirect('/users/login/')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # ✅ [수정] 이 include가 최상위에 있도록 합니다.
-    #    혹시 이 아래에 path('users/', include('django.contrib.auth.urls')) 코드가 있다면 삭제해주세요.
+
+    # 앱 URL 포함
     path('users/', include('users.urls')),
     path('books/', include('books.urls')),
     path('plans/', include('plans.urls')),
-    # ... 기타 다른 앱들의 URL ...
+
+    # 🔹 루트 접근 시 로그인 페이지로 리디렉트
+    path('', redirect_to_login),
 ]
 
+# 🔹 DEBUG 모드에서 media 파일 서빙
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
