@@ -17,11 +17,6 @@ db.sqlite3
 # 로그 파일
 *.log
 
-# 스크린샷에서 확인된 대용량 데이터 파일 (필수!)
-# (용량이 커서 Git에 올리면 안 됩니다)
-book_details_results.csv
-book_index.faiss
-
 # 사용자가 업로드한 파일 (미디어 파일)
 media/
 
