@@ -1,4 +1,6 @@
 import datetime
+import os  # 👈 [추가]
+from django.conf import settings  # 👈 [추가]
 # import faiss  # [수정] 파일 최상단에서 삭제
 # import numpy as np  # [수정] 파일 최상단에서 삭제
 # from sentence_transformers import SentenceTransformer  # [수정] 파일 최상단에서 삭제
@@ -14,12 +16,11 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from users.models import Profile
 from .form import ReadingEntryForm
-from .models import Book, ReadingEntry, Wishlist, Genre, UserFeedback # [추가] UserFeedback 모델 import
+from .models import Book, ReadingEntry, Wishlist, Genre, UserFeedback
 from django.urls import reverse
 
 
 # --- [수정] 추천 시스템 관련: 지연 로딩(Lazy Loading) ---
-# migrate 같은 명령어가 실행될 때 로드되지 않도록 전역 변수로 선언만 합니다.
 REC_MODEL = None
 REC_INDEX = None
 
@@ -36,9 +37,25 @@ def load_recommendation_system():
         from sentence_transformers import SentenceTransformer
         import faiss
         
+        # ▼▼▼ [핵심 수정] FAISS 파일 경로를 BASE_DIR 기준으로 설정 ▼▼▼
+        faiss_file_path = os.path.join(settings.BASE_DIR, 'book_index.faiss')
+
+        # 파일 존재 여부 확인
+        if not os.path.exists(faiss_file_path):
+            print(f"⚠️ ERROR: FAISS file not found at {faiss_file_path}")
+            REC_MODEL = None
+            REC_INDEX = None
+            return
+        # ▲▲▲ [핵심 수정] ▲▲▲
+
         REC_MODEL = SentenceTransformer('jhgan/ko-sroberta-multitask')
-        REC_INDEX = faiss.read_index('book_index.faiss') 
+        REC_INDEX = faiss.read_index(faiss_file_path) # 👈 수정된 경로 사용
         print("✅ Recommendation model and FAISS index loaded successfully.")
+
+    except FileNotFoundError: # 👈 명시적 에러 처리
+        print(f"⚠️ FileNotFoundError: FAISS file not found at {faiss_file_path}")
+        REC_MODEL = None
+        REC_INDEX = None
     except Exception as e:
         REC_MODEL = None
         REC_INDEX = None
@@ -262,8 +279,8 @@ def _get_recommendations_for_user(user, k=30):
     if not user_entries.exists():
         recommendation_type = "선택하신 선호 장르의 인기 도서예요."
         if hasattr(user, 'profile') and hasattr(user.profile, 'get_preferred_genres'):
-             preferred_genres = user.profile.get_preferred_genres()
-             if preferred_genres:
+            preferred_genres = user.profile.get_preferred_genres()
+            if preferred_genres:
                 recommended_books = list(Book.objects.filter(genres__name__in=preferred_genres).distinct().order_by('?')[:k])
                 if recommended_books: return recommended_books, recommendation_type
         return list(Book.objects.all().order_by('?')[:k]), "Cheereading의 인기 추천 도서예요."
