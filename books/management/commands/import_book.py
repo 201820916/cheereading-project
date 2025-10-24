@@ -1,30 +1,36 @@
 import pandas as pd
-import requests
-from io import StringIO
+import os  # 👈 os 임포트
+from django.conf import settings  # 👈 settings 임포트
 from django.core.management.base import BaseCommand
 from books.models import Book, Genre
+# ❌ requests, StringIO는 더 이상 필요 없으므로 삭제
 
 
 class Command(BaseCommand):
-    help = 'Import books from a CSV file into the database (supports Google Drive)'
+    help = 'Import books from a local CSV file (book_details_results.csv) into the database'
 
     def handle(self, *args, **kwargs):
-        # 🔹 Google Drive 공유 링크를 직접 다운로드 가능한 형태로 변환
-        url = "https://drive.google.com/uc?export=download&id=1HHyLKBosiPkHkiJDzTVmiI_0UhVeDxdz"
+        
+        # 🔹 GitHub에 업로드한 로컬 파일 경로 설정
+        csv_file_name = 'book_details_results.csv'
+        csv_file_path = os.path.join(settings.BASE_DIR, csv_file_name)
 
-        self.stdout.write(self.style.SUCCESS(f"Downloading CSV data from Google Drive..."))
+        self.stdout.write(self.style.SUCCESS(f"Loading CSV data from local file: {csv_file_path}"))
 
         try:
-            response = requests.get(url)
-            response.raise_for_status()  # 200이 아니면 예외 발생
-            csv_data = StringIO(response.text)
-            df = pd.read_csv(csv_data, engine='python')
-            df = df.where(pd.notnull(df), None)
+            # 🔹 GCS/Google Drive 로직 대신, 파일 경로에서 직접 읽기
+            df = pd.read_csv(csv_file_path) 
+            df = df.where(pd.notnull(df), None) # NaN 값을 None으로 변경
+        
+        except FileNotFoundError:
+            self.stdout.write(self.style.ERROR(f"❌ ERROR: File not found at {csv_file_path}"))
+            self.stdout.write(self.style.ERROR("Ensure 'book_details_results.csv' is in the root directory of your project."))
+            return
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"❌ Failed to load CSV from Google Drive: {e}"))
+            self.stdout.write(self.style.ERROR(f"❌ Failed to load or read CSV file: {e}"))
             return
 
-        self.stdout.write(self.style.SUCCESS(f"✅ Loaded {len(df)} rows from Google Drive CSV"))
+        self.stdout.write(self.style.SUCCESS(f"✅ Loaded {len(df)} rows from '{csv_file_name}'"))
         self.stdout.write(self.style.SUCCESS(f"Starting to import {len(df)} books..."))
 
         for index, row in df.iterrows():
@@ -49,7 +55,7 @@ class Command(BaseCommand):
                 defaults=defaults_data
             )
 
-            # DB 확인용 로그
+            # DB 확인용 로그 (원본 코드와 동일)
             book_from_db = Book.objects.get(id=book_obj.id)
             self.stdout.write(
                 self.style.SUCCESS(
@@ -57,7 +63,7 @@ class Command(BaseCommand):
                 )
             )
 
-            # 장르 처리
+            # 장르 처리 (원본 코드와 동일)
             genre_str = row.get('genre')
             if genre_str and book_obj:
                 genre_names = [name.strip() for name in str(genre_str).split(',')]
@@ -70,7 +76,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("🎉 Import complete!"))
 
     # ---------------------------------------------------------
-    # Helper functions
+    # Helper functions (원본 코드와 동일)
     # ---------------------------------------------------------
     def clean_year(self, year):
         if year is None:
